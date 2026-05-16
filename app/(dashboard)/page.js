@@ -5,17 +5,26 @@ import { Plus, CheckCircle2, Clock, TrendingUp, Calendar as CalIcon, Zap, ListTo
 import ActivityChart from '@/components/ActivityChart';
 import TaskModal from '@/components/TaskModal';
 
+import { getProfile, getTasks } from '@/app/actions/data';
+
 export default function Dashboard() {
+  const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [quickInput, setQuickInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ todo: 0, inprogress: 0, done: 0, total: 0 });
 
+  const fetchUser = useCallback(async () => {
+    try {
+      const json = await getProfile();
+      if (json.success) setUser(json.data);
+    } catch (e) { console.error(e); }
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch('/api/tasks');
-      const json = await res.json();
+      const json = await getTasks();
       if (json.success) {
         setTasks(json.data);
         calcStats(json.data);
@@ -24,7 +33,10 @@ export default function Dashboard() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useEffect(() => { 
+    fetchUser();
+    fetchTasks(); 
+  }, [fetchUser, fetchTasks]);
 
   function calcStats(data) {
     setStats({
@@ -57,7 +69,9 @@ export default function Dashboard() {
     <div className="animate-fade-in">
       <header className="dash-header">
         <div>
-          <h1>Selamat Datang 👋</h1>
+          <h1>
+            Selamat Datang, {loading ? '...' : (user ? user.name.split(' ')[0] : 'Tamu')} 👋
+          </h1>
           <p className="subtitle">{dateStr}</p>
         </div>
         <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
@@ -136,6 +150,35 @@ export default function Dashboard() {
       </div>
       <div className="glass chart-wrap">
         <ActivityChart tasks={tasks} />
+      </div>
+
+      {/* Task Tracking Widget */}
+      <div className="section-header" style={{ marginTop: '2rem' }}>
+        <h2>Task Tracking</h2>
+        <span className="badge-info">Fokus Aktif</span>
+      </div>
+      <div className="glass tracking-widget animate-fade-in">
+        <div className="tracking-info">
+          <div className="tracking-main">
+            <div className="pulse-dot" />
+            <div>
+              <h3>{tasks.find(t => t.status === 'In Progress')?.title || 'Tidak ada task aktif'}</h3>
+              <p>{tasks.find(t => t.status === 'In Progress')?.category || 'Pilih task di Board untuk memulai'}</p>
+            </div>
+          </div>
+          <div className="tracking-timer">
+            <span className="timer-val">25:00</span>
+            <button className="btn-icon-sm" style={{ background: 'var(--accent)', color: 'white' }}>
+              <Zap size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="tracking-progress">
+          <div className="progress-bar-mini">
+            <div className="progress-fill-mini" style={{ width: '45%' }} />
+          </div>
+          <span className="progress-label">Sesi Pomodoro: 45%</span>
+        </div>
       </div>
 
       {/* Recent Tasks */}
@@ -337,6 +380,63 @@ export default function Dashboard() {
           border-radius: 12px;
           border: 1px dashed rgba(255,255,255,0.07);
         }
+
+        .tracking-widget {
+          padding: 1.5rem;
+          border-radius: 16px;
+          border: 1px solid rgba(139,92,246,0.3);
+          background: linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(236,72,153,0.05) 100%);
+        }
+        .tracking-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.25rem;
+        }
+        .tracking-main {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+        .tracking-main h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+        .tracking-main p { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+        .pulse-dot {
+          width: 10px;
+          height: 10px;
+          background: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 0 0 rgba(16,185,129,0.7);
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+        .tracking-timer {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+        .timer-val { font-size: 1.5rem; font-weight: 800; font-family: monospace; letter-spacing: -1px; }
+        .tracking-progress {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+        .progress-bar-mini {
+          flex: 1;
+          height: 6px;
+          background: rgba(255,255,255,0.06);
+          border-radius: 999px;
+          overflow: hidden;
+        }
+        .progress-fill-mini {
+          height: 100%;
+          background: var(--accent);
+          border-radius: 999px;
+        }
+        .progress-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
 
         h1 {
           font-size: 1.8rem;

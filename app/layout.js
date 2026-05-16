@@ -1,5 +1,4 @@
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
 
 export const metadata = {
   title: 'Vortex Task — Premium Daily Task Manager',
@@ -15,12 +14,7 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <div className="app-container">
-          <Sidebar />
-          <main className="main-content">
-            {children}
-          </main>
-        </div>
+        {children}
       </body>
     </html>
   );

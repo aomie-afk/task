@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { memoryStore } from '@/lib/memoryStore';
+import { getSession } from '@/lib/session';
 
 async function getDB() {
   try {
@@ -17,11 +18,16 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
     const body = await request.json();
     const db = await getDB();
+    const session = await getSession();
+
+    if (!session || !session.userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     if (db.type === 'mongo') {
       if (body.status === 'Done') body.completedAt = new Date();
-      const task = await db.Task.findByIdAndUpdate(id, body, { new: true, runValidators: true });
-      if (!task) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+      const task = await db.Task.findOneAndUpdate({ _id: id, user: session.userId }, body, { new: true, runValidators: true });
+      if (!task) return NextResponse.json({ success: false, error: 'Task not found or unauthorized' }, { status: 404 });
       return NextResponse.json({ success: true, data: task });
     }
 
@@ -38,10 +44,15 @@ export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
     const db = await getDB();
+    const session = await getSession();
+
+    if (!session || !session.userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     if (db.type === 'mongo') {
-      const result = await db.Task.deleteOne({ _id: id });
-      if (!result.deletedCount) return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+      const result = await db.Task.deleteOne({ _id: id, user: session.userId });
+      if (!result.deletedCount) return NextResponse.json({ success: false, error: 'Task not found or unauthorized' }, { status: 404 });
       return NextResponse.json({ success: true, data: {} });
     }
 

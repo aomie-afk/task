@@ -27,6 +27,8 @@ const COLUMNS = [
   { key: 'Done', label: 'Selesai', color: '#10b981' },
 ];
 
+import { getTasks } from '@/app/actions/data';
+
 const CATEGORIES = ['Semua', 'Kerja', 'Pribadi', 'Kesehatan', 'Keuangan', 'Lainnya'];
 const PRIORITIES = ['Semua', 'High', 'Medium', 'Low'];
 
@@ -55,8 +57,7 @@ export default function TaskBoard() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/tasks');
-      const json = await res.json();
+      const json = await getTasks();
       if (json.success) setTasks(json.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }

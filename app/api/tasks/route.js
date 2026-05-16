@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { memoryStore } from '@/lib/memoryStore';
+import { getSession } from '@/lib/session';
 
 // Try to use MongoDB, fall back to in-memory store
 async function getDB() {
@@ -25,9 +26,14 @@ export async function GET(request) {
     Object.keys(query).forEach(k => query[k] == null && delete query[k]);
 
     const db = await getDB();
+    const session = await getSession();
+
+    if (!session || !session.userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     if (db.type === 'mongo') {
-      const mongoQuery = {};
+      const mongoQuery = { user: session.userId };
       if (query.category) mongoQuery.category = query.category;
       if (query.status) mongoQuery.status = query.status;
       if (query.date) {
@@ -54,9 +60,14 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const db = await getDB();
+    const session = await getSession();
+
+    if (!session || !session.userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     if (db.type === 'mongo') {
-      const task = await db.Task.create(body);
+      const task = await db.Task.create({ ...body, user: session.userId });
       return NextResponse.json({ success: true, data: task }, { status: 201 });
     }
 
